@@ -42,7 +42,6 @@ namespace Assets.Scripts.IAJ.Unity.Movement.DynamicMovement
             Color leftRayColor = Color.white;
             Color rightRayColor = Color.white;
 
-            Collider col = this.Obstacle.GetComponent<Collider>();
             MovementOutput movementOutput = new MovementOutput();
 
             // If we're not moving, no need to check for collisions
@@ -54,9 +53,13 @@ namespace Assets.Scripts.IAJ.Unity.Movement.DynamicMovement
 
             Ray mainRay = new Ray(this.Character.Position, this.Character.velocity.normalized);
 
-
+            /*
             Vector3 leftWhisker = (Quaternion.Euler(0, -37, 0) * this.Character.velocity);
             Vector3 rightWhisker = (Quaternion.Euler(0, 37, 0) * this.Character.velocity);
+            */
+
+            Vector3 leftWhisker = MathHelper.Rotate2D(this.Character.velocity, -MathConstants.MATH_PI_6);
+            Vector3 rightWhisker = MathHelper.Rotate2D(this.Character.velocity, MathConstants.MATH_PI_6);
 
             Ray leftRay = new Ray(this.Character.Position, leftWhisker.normalized);
             Ray rightRay = new Ray(this.Character.Position, rightWhisker.normalized);
@@ -66,15 +69,15 @@ namespace Assets.Scripts.IAJ.Unity.Movement.DynamicMovement
             bool collision = false;
 
             //Check Collisions
-            if (col.Raycast(mainRay, out hit, this.MaxLookAhead))
+            if (ObstacleCollider.Raycast(mainRay, out hit, this.MaxLookAhead))
             {
                 mainRayColor = Color.red;
                 collision = true;
-            }else if (col.Raycast(leftRay, out hit, this.MaxLookAhead / 2))
+            }else if (ObstacleCollider.Raycast(leftRay, out hit, this.MaxLookAhead/2))
             {
                 leftRayColor = Color.red;
                 collision = true;
-            }else if(col.Raycast(rightRay, out hit, this.MaxLookAhead / 2))
+            }else if(ObstacleCollider.Raycast(rightRay, out hit, this.MaxLookAhead/2))
             {
                 rightRayColor = Color.red;
                 collision = true;
@@ -88,8 +91,8 @@ namespace Assets.Scripts.IAJ.Unity.Movement.DynamicMovement
             }
 
             Debug.DrawRay(this.Character.Position, this.Character.velocity.normalized * this.MaxLookAhead, mainRayColor);
-            Debug.DrawRay(this.Character.Position, leftWhisker.normalized * this.MaxLookAhead / 2, leftRayColor);
-            Debug.DrawRay(this.Character.Position, rightWhisker.normalized * this.MaxLookAhead / 2, rightRayColor);
+            Debug.DrawRay(this.Character.Position, leftWhisker.normalized * this.MaxLookAhead/2, leftRayColor);
+            Debug.DrawRay(this.Character.Position, rightWhisker.normalized * this.MaxLookAhead/2, rightRayColor);
 
             return movementOutput;
         }

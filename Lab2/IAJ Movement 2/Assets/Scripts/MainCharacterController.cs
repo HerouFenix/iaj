@@ -18,6 +18,9 @@ public class MainCharacterController : MonoBehaviour {
     public float MAX_LOOK_AHEAD = 5.0f;
     public float AVOID_MARGIN = 4.0f;
 
+    public float MAX_TIME_LOOK_AHEAD = 3.0f;
+    public float COLLISION_RADIUS = 1.0f;
+
     public GameObject movementText;
     public DynamicCharacter character;
 
@@ -83,14 +86,16 @@ public class MainCharacterController : MonoBehaviour {
         {
             if (otherCharacter != this.character)
             {
-                //TODO: add your AvoidCharacter movement here
-                var avoidCharacter = new DynamicAvoidCharacter(otherCharacter.KinematicData)
-                {
-                    Character = this.character.KinematicData,
-                    MaxAcceleration = MAX_ACCELERATION,
-                    DebugColor = Color.cyan,
+                    //TODO: add your AvoidCharacter movement here
+                    var avoidCharacter = new DynamicAvoidCharacter(otherCharacter.KinematicData)
+                    {
+                        Character = this.character.KinematicData,
+                        MaxAcceleration = MAX_ACCELERATION,
+                        DebugColor = Color.cyan,
+                        MaxTimeLookAhead = MAX_TIME_LOOK_AHEAD,
+                        AvoidMargin = COLLISION_RADIUS
 
-                };
+                    };
 
                 this.blendedMovement.Movements.Add(new MovementWithWeight(avoidCharacter, 2.0f));
                 this.priorityMovement.Movements.Add(avoidCharacter);
