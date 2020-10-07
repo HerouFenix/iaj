@@ -66,7 +66,6 @@ public class MainCharacterController : MonoBehaviour {
 
         foreach (var obstacle in obstacles)
         {
-            //TODO: add your AvoidObstacle movement here
             var avoidObstacleMovement = new DynamicAvoidObstacle(obstacle)
             {
                 MaxAcceleration = MAX_ACCELERATION,

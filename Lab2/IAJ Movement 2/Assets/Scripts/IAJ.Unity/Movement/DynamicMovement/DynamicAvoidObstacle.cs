@@ -38,34 +38,60 @@ namespace Assets.Scripts.IAJ.Unity.Movement.DynamicMovement
         public override MovementOutput GetMovement()
         {
             RaycastHit hit;
-            Color color = Color.white;
+            Color mainRayColor = Color.white;
+            Color leftRayColor = Color.white;
+            Color rightRayColor = Color.white;
 
             Collider col = this.Obstacle.GetComponent<Collider>();
+            MovementOutput movementOutput = new MovementOutput();
+
+            // If we're not moving, no need to check for collisions
+            // This had to be added due to errors when creating the rays with a 0 velocity
+            if (this.Character.velocity.magnitude <= 0)
+            {
+                return movementOutput;
+            }
 
             Ray mainRay = new Ray(this.Character.Position, this.Character.velocity.normalized);
 
-            /* ASK HOW TO CREATE WHISKERS */
-            Vector3 leftWhisker = (Quaternion.Euler(0, -45, 0) * this.Character.velocity);
-            Vector3 rightWhisker = (Quaternion.Euler(0, 45, 0) * this.Character.velocity);
+
+            Vector3 leftWhisker = (Quaternion.Euler(0, -37, 0) * this.Character.velocity);
+            Vector3 rightWhisker = (Quaternion.Euler(0, 37, 0) * this.Character.velocity);
 
             Ray leftRay = new Ray(this.Character.Position, leftWhisker.normalized);
             Ray rightRay = new Ray(this.Character.Position, rightWhisker.normalized);
 
-            Debug.DrawRay(this.Character.Position, new Vector3(1.0f, 0.0f, 1.0f), color);
+            //Debug.DrawRay(this.Character.Position, new Vector3(1.0f, 0.0f, 1.0f), color);
+
+            bool collision = false;
 
             //Check Collisions
-            if (col.Raycast(mainRay, out hit, this.MaxLookAhead) || col.Raycast(leftRay, out hit, this.MaxLookAhead/2) || col.Raycast(rightRay, out hit, this.MaxLookAhead/2))
+            if (col.Raycast(mainRay, out hit, this.MaxLookAhead))
             {
-                //Debug.Log("HIT");
+                mainRayColor = Color.red;
+                collision = true;
+            }else if (col.Raycast(leftRay, out hit, this.MaxLookAhead / 2))
+            {
+                leftRayColor = Color.red;
+                collision = true;
+            }else if(col.Raycast(rightRay, out hit, this.MaxLookAhead / 2))
+            {
+                rightRayColor = Color.red;
+                collision = true;
+            }
+
+
+            if (collision)
+            {
                 base.Target.Position = hit.point + hit.normal * this.AvoidMargin;
-                return base.GetMovement();
-
-            }
-            else
-            {
-                return new MovementOutput();
+                movementOutput = base.GetMovement();
             }
 
+            Debug.DrawRay(this.Character.Position, this.Character.velocity.normalized * this.MaxLookAhead, mainRayColor);
+            Debug.DrawRay(this.Character.Position, leftWhisker.normalized * this.MaxLookAhead / 2, leftRayColor);
+            Debug.DrawRay(this.Character.Position, rightWhisker.normalized * this.MaxLookAhead / 2, rightRayColor);
+
+            return movementOutput;
         }
     }
 }
