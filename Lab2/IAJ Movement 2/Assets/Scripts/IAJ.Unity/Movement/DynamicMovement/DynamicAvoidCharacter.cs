@@ -24,9 +24,12 @@ namespace Assets.Scripts.IAJ.Unity.Movement.DynamicMovement
             this.Output.Clear();
             
             Vector3 deltaPos = this.Target.Position - this.Character.Position;
+            deltaPos.y = 0;
             Vector3 deltaVel = this.Target.velocity - this.Character.velocity;
-            Debug.Log("DeltaPos: " + deltaPos);
-            Debug.Log("DeltaVel: " + deltaVel);
+            deltaVel.y = 0;
+            
+            //Debug.Log("DeltaPos: " + deltaPos);
+            //Debug.Log("DeltaVel: " + deltaVel);
 
             float deltaSqrSpeed = deltaVel.sqrMagnitude;
 
