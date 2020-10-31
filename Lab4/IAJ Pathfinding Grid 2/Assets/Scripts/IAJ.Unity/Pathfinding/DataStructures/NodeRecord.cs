@@ -22,6 +22,9 @@ namespace Assets.Scripts.IAJ.Unity.Pathfinding.DataStructures
         public NodeStatus status;
         public bool isWalkable;
 
+        public static int next_index = 0;
+        public int NodeIndex;
+
         public override string ToString()
         {
             return x + "," + y;
@@ -43,6 +46,9 @@ namespace Assets.Scripts.IAJ.Unity.Pathfinding.DataStructures
             parent = null;
             isWalkable = true;
             status = NodeStatus.Unvisited;
+
+            NodeIndex = next_index;
+            next_index++;
         }
         public void CalculateFCost()
         {

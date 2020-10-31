@@ -9,7 +9,7 @@ using Assets.Scripts.IAJ.Unity.Pathfinding.Heuristics;
 using Assets.Scripts.IAJ.Unity.Utils;
 public class PathfindingManager : MonoBehaviour
 {
-    
+
     //Struct for default positions
     [Serializable]
     public struct defaultPos
@@ -46,6 +46,7 @@ public class PathfindingManager : MonoBehaviour
     //public properties
     public bool partialPath;
     public bool UseEuclidean;
+    public String searchAlgorithm;
 
     //Public Debug options
     public bool showCoordinates;
@@ -79,7 +80,21 @@ public class PathfindingManager : MonoBehaviour
             heuristic = new ZeroHeuristic();
         }
 
-        this.pathfinding = new AStarPathfinding(width, height, cellSize, new SimpleUnorderedNodeList(), new ClosedDictionary(), heuristic);
+        switch (this.searchAlgorithm)
+        {
+            case "A*":
+                this.pathfinding = new AStarPathfinding(width, height, cellSize, new SimpleUnorderedNodeList(), new ClosedDictionary(), heuristic);
+                break;
+            case "NodeArrayA*":
+                this.pathfinding = new NodeArrayAStarPathfinding(width, height, cellSize, heuristic);
+                break;
+            case "JPS+":
+                break;
+            default:
+                this.pathfinding = new AStarPathfinding(width, height, cellSize, new SimpleUnorderedNodeList(), new ClosedDictionary(), heuristic);
+                break;
+        }
+
         visualGrid = new GameObject[width, height];
         GridMapVisual();
         pathfinding.grid.OnGridValueChanged += Grid_OnGridValueChange;
@@ -112,8 +127,8 @@ public class PathfindingManager : MonoBehaviour
             {
                 this.SetObjectColor(startingX, startingY, Color.cyan);
             }
-            else  startingPosition = new Vector3();
-           
+            else startingPosition = new Vector3();
+
         }
 
         // If we already have a starting posintion once we clicked we have our goalPosition
@@ -132,10 +147,12 @@ public class PathfindingManager : MonoBehaviour
                 startingPosition = new Vector3();
                 goalPosition = new Vector3();
             }
-            else { goalPosition = new Vector3();
-               
+            else
+            {
+                goalPosition = new Vector3();
+
             }
-            
+
         }
 
         // Space clears the grid
@@ -260,18 +277,18 @@ public class PathfindingManager : MonoBehaviour
                 if (textLines[i, j] == "1")
                 {
                     var node = pathfinding.grid.GetGridObject(j, height - i - 1);
+
                     node.isWalkable = false;
                     pathfinding.grid.SetGridObject(node.x, node.y, node);
 
                 }
 
-       
-      for (int x = 0; x < pathfinding.grid.getWidth(); x++)
-            for (int y = 0; y < pathfinding.grid.getHeight(); y++){
-                  
-                   visualGrid[x, y] = CreateGridObject(this.gridNodePrefab, pathfinding.grid.GetGridObject(x, y)?.ToString(), cellSize, pathfinding.grid.GetWorldPosition(x, y) + new Vector3(cellSize, 2, cellSize) * 0.5f, 40, Color.black, Color.white);
 
+        for (int x = 0; x < pathfinding.grid.getWidth(); x++)
+            for (int y = 0; y < pathfinding.grid.getHeight(); y++)
+            {
 
+                visualGrid[x, y] = CreateGridObject(this.gridNodePrefab, pathfinding.grid.GetGridObject(x, y)?.ToString(), cellSize, pathfinding.grid.GetWorldPosition(x, y) + new Vector3(cellSize, 2, cellSize) * 0.5f, 40, Color.black, Color.white);
             }
         UpdateGrid();
     }
@@ -321,7 +338,7 @@ public class PathfindingManager : MonoBehaviour
         visualGrid[x, y].GetComponent<SpriteRenderer>().color = color;
     }
 
-    
+
     public void UpdateGrid()
     {
         for (int x = 0; x < pathfinding.grid.getWidth(); x++)
@@ -362,9 +379,10 @@ public class PathfindingManager : MonoBehaviour
         var fileContent = reader.ReadToEnd();
         reader.Close();
         var lines = fileContent.Split("\n"[0]);
-        
+
         int i = 0;
-         foreach(var l in lines){
+        foreach (var l in lines)
+        {
             var words = l.Split();
             var j = 0;
 
@@ -377,7 +395,7 @@ public class PathfindingManager : MonoBehaviour
 
                 if (j == textLines.GetLength(1))
                     break;
-            }            
+            }
 
             i++;
             if (i == textLines.GetLength(0))

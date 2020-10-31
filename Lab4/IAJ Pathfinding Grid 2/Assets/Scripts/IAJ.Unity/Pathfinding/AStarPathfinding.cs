@@ -9,8 +9,8 @@ namespace Assets.Scripts.IAJ.Unity.Pathfinding
 {
     public class AStarPathfinding
     {
-        private const int MOVE_STRAIGHT_COST = 10;
-        private const int MOVE_DIAGONAL_COST = 14;
+        protected const int MOVE_STRAIGHT_COST = 10;
+        protected const int MOVE_DIAGONAL_COST = 14;
         public Grid<NodeRecord> grid { get; set; }
         public uint NodesPerSearch { get; set; }
         public int MaxOpenNodes { get; protected set; }
@@ -19,6 +19,8 @@ namespace Assets.Scripts.IAJ.Unity.Pathfinding
         public bool InProgress { get; set; }
         public IOpenSet Open { get; protected set; }
         public IClosedSet Closed { get; protected set; }
+
+        public int counter = 0;
 
         //heuristic function
         public IHeuristic Heuristic { get; protected set; }
@@ -41,7 +43,7 @@ namespace Assets.Scripts.IAJ.Unity.Pathfinding
             this.NodesPerSearch = 15;
 
         }
-        public void InitializePathfindingSearch(int startX, int startY, int goalX, int goalY)
+        virtual public void InitializePathfindingSearch(int startX, int startY, int goalX, int goalY)
         {
             this.StartPositionX = startX;
             this.StartPositionY = startY;
@@ -61,7 +63,8 @@ namespace Assets.Scripts.IAJ.Unity.Pathfinding
             var initialNode = new NodeRecord(StartNode.x, StartNode.y)
             {
                 gCost = 0,
-                hCost = this.Heuristic.H(this.StartNode, this.GoalNode)
+                hCost = this.Heuristic.H(this.StartNode, this.GoalNode),
+                NodeIndex = StartNode.NodeIndex
             };
 
             initialNode.CalculateFCost();
@@ -71,13 +74,13 @@ namespace Assets.Scripts.IAJ.Unity.Pathfinding
             this.Closed.Initialize();
         }
 
-        public bool Search(out List<NodeRecord> solution, bool returnPartialSolution = false, int totalNodesSearched = 0)
+        virtual public bool Search(out List<NodeRecord> solution, bool returnPartialSolution = false, int totalNodesSearched = 0)
         {
             int openSize = this.Open.CountOpen();
             // Check if our open list is now bigger than our all-time maximum
             if (openSize  > this.MaxOpenNodes)
             {
-                this.MaxOpenNodes = this.Open.CountOpen();
+                this.MaxOpenNodes = openSize;
             }
 
             // Check if we have no more open nodes
@@ -142,9 +145,11 @@ namespace Assets.Scripts.IAJ.Unity.Pathfinding
             {
                 if(open.x == child.x && open.y == child.y)
                 {
+
                     // Child is in open
                     if (open.CompareTo(child) == 1)
                     {
+
                         this.Open.Replace(open, child);
                         child.status = NodeStatus.Open;
                         this.grid.SetGridObject(child.x, child.y, child);
@@ -185,7 +190,8 @@ namespace Assets.Scripts.IAJ.Unity.Pathfinding
             {
                 parent = parent,
                 gCost = parent.gCost + CalculateDistanceCost(parent, neighbour),
-                hCost = this.Heuristic.H(neighbour, this.GoalNode)
+                hCost = this.Heuristic.H(neighbour, this.GoalNode),
+                NodeIndex = neighbour.NodeIndex
             };
 
             childNodeRecord.CalculateFCost();
@@ -194,7 +200,7 @@ namespace Assets.Scripts.IAJ.Unity.Pathfinding
         }
 
         //Retrieve all the neighbours possible optimization here
-        private List<NodeRecord> GetNeighbourList(NodeRecord currentNode)
+        protected List<NodeRecord> GetNeighbourList(NodeRecord currentNode)
         {
             List<NodeRecord> neighbourList = new List<NodeRecord>();
 
@@ -262,7 +268,5 @@ namespace Assets.Scripts.IAJ.Unity.Pathfinding
             path.Reverse();
             return path;
         }
-
-
     }
 }

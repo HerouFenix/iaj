@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Assets.Scripts.IAJ.Unity.Pathfinding.DataStructures
 {
@@ -17,6 +18,7 @@ namespace Assets.Scripts.IAJ.Unity.Pathfinding.DataStructures
             for(int i = 0; i < nodes.Count; i++)
             {
                 var node = nodes[i];
+                this.NodeRecords[i] = node;
             }
 
             this.SpecialCaseNodes = new List<NodeRecord>();
@@ -24,11 +26,11 @@ namespace Assets.Scripts.IAJ.Unity.Pathfinding.DataStructures
             this.Open = new NodePriorityHeap();
         }
 
-        public void GetNodeRecord(NodeRecord node)
+        public NodeRecord GetNodeRecord(NodeRecord node)
         {
             //do not change this method
             //here we have the "special case" node handling
-       /*     if (node.NodeIndex == -1)
+            if (node.NodeIndex == -1)
             {
                 for (int i = 0; i < this.SpecialCaseNodes.Count; i++)
                 {
@@ -42,12 +44,24 @@ namespace Assets.Scripts.IAJ.Unity.Pathfinding.DataStructures
             else
             {
                 return  this.NodeRecords[node.NodeIndex];
-            }*/
+            }
         }
 
         public void AddSpecialCaseNode(NodeRecord node)
         {
             this.SpecialCaseNodes.Add(node);
+        }
+
+        public void Initialize()
+        {
+            this.Open.Initialize();
+            //we want this to be very efficient (that's why we use for)
+            for (int i = 0; i < this.NodeRecords.Length; i++)
+            {
+                this.NodeRecords[i].status = NodeStatus.Unvisited;
+            }
+
+            this.SpecialCaseNodes.Clear();
         }
 
         void IOpenSet.Initialize()
@@ -64,80 +78,111 @@ namespace Assets.Scripts.IAJ.Unity.Pathfinding.DataStructures
 
         void IClosedSet.Initialize()
         {
-            //TODO implement
-            throw new NotImplementedException();
+            return;
         }
 
         public void AddToOpen(NodeRecord nodeRecord)
         {
-            //TODO implement
-            throw new NotImplementedException();
+            var nodeToUpdate = this.NodeRecords.SingleOrDefault(x => x.NodeIndex == nodeRecord.NodeIndex);
+            nodeToUpdate.status = NodeStatus.Open;
+            nodeToUpdate.gCost = nodeRecord.gCost;
+            nodeToUpdate.hCost = nodeRecord.hCost;
+            nodeToUpdate.fCost = nodeRecord.fCost;
+            nodeToUpdate.parent = nodeRecord.parent;
+
+            Open.AddToOpen(nodeRecord);
         }
 
         public void AddToClosed(NodeRecord nodeRecord)
         {
-            //TODO implement
-            throw new NotImplementedException();
+            var nodeToUpdate = this.NodeRecords.SingleOrDefault(x => x.NodeIndex == nodeRecord.NodeIndex);
+            nodeToUpdate.status = NodeStatus.Closed;
+            nodeToUpdate.gCost = nodeRecord.gCost;
+            nodeToUpdate.hCost = nodeRecord.hCost;
+            nodeToUpdate.fCost = nodeRecord.fCost;
+            nodeToUpdate.parent = nodeRecord.parent;
+
         }
 
         public NodeRecord SearchInOpen(NodeRecord nodeRecord)
         {
-            //TODO implement
-            throw new NotImplementedException();
+            NodeRecord node = this.NodeRecords[nodeRecord.NodeIndex];
+            if (node.status == NodeStatus.Open)
+            {
+                return node;
+            }
+
+            return null;
         }
 
         public NodeRecord SearchInClosed(NodeRecord nodeRecord)
         {
-            //TODO implement
-            throw new NotImplementedException();
+            NodeRecord node = this.NodeRecords[nodeRecord.NodeIndex];
+            if (node.status == NodeStatus.Closed)
+            {
+                return node;
+            }
+
+            return null;
         }
 
         public NodeRecord GetBestAndRemove()
         {
-            //TODO implement
-            throw new NotImplementedException();
+            NodeRecord node = Open.GetBestAndRemove();
+
+            var nodeToUpdate = this.NodeRecords.SingleOrDefault(x => x.NodeIndex == node.NodeIndex);
+            nodeToUpdate.status = NodeStatus.Closed;
+
+            return this.NodeRecords[node.NodeIndex];
         }
 
         public NodeRecord PeekBest()
         {
-            //TODO implement
-            throw new NotImplementedException();
+            return Open.PeekBest();
         }
 
         public void Replace(NodeRecord nodeToBeReplaced, NodeRecord nodeToReplace)
         {
-            //TODO implement
-            throw new NotImplementedException();
+            this.NodeRecords[nodeToBeReplaced.NodeIndex] = nodeToReplace;
+
+            this.Open.Replace(nodeToBeReplaced, nodeToReplace);
         }
 
         public void RemoveFromOpen(NodeRecord nodeRecord)
         {
-            //TODO implement
-            throw new NotImplementedException();
+            var nodeToUpdate = this.NodeRecords.SingleOrDefault(x => x.NodeIndex == nodeRecord.NodeIndex);
+            nodeToUpdate.status = NodeStatus.Closed;
+
+            this.Open.RemoveFromOpen(nodeRecord);
         }
 
         public void RemoveFromClosed(NodeRecord nodeRecord)
         {
-            //TODO implement
-            throw new NotImplementedException();
+            var nodeToUpdate = this.NodeRecords.SingleOrDefault(x => x.NodeIndex == nodeRecord.NodeIndex);
+            nodeToUpdate.status = NodeStatus.Open;
         }
 
         ICollection<NodeRecord> IOpenSet.All()
         {
-            //TODO implement
-            throw new NotImplementedException();
+            return this.Open.All();
         }
 
         ICollection<NodeRecord> IClosedSet.All()
         {
-            //TODO implement
-            throw new NotImplementedException();
+            List<NodeRecord> closedNodes = new List<NodeRecord>();
+            foreach(var node in this.NodeRecords)
+            {
+                if(node.status == NodeStatus.Closed)
+                {
+                    closedNodes.Add(node);
+                }
+            }
+            return closedNodes;
         }
 
         public int CountOpen()
         {
-            //TODO implement
-            throw new NotImplementedException();
+            return this.Open.CountOpen();
         }
     }
 }
