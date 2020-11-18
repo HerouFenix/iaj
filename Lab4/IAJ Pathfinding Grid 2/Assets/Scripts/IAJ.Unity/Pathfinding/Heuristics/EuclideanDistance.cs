@@ -11,7 +11,7 @@ namespace Assets.Scripts.IAJ.Unity.Pathfinding.Heuristics
         {
             float x = goalNode.x - node.x;
             float y = goalNode.y - node.y;
-            return Mathf.Sqrt(x*x + y*y);
+            return Mathf.FloorToInt(Mathf.Sqrt(x*x + y*y) * 10);
         }
     }
 }

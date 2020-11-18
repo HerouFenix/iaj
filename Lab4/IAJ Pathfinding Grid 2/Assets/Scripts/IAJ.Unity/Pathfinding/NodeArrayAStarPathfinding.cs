@@ -141,7 +141,7 @@ namespace Assets.Scripts.IAJ.Unity.Pathfinding
                 // Child is in closed
                 if (node.CompareTo(child) == 1)
                 {
-                    this.NodeRecords.RemoveFromClosed(node);
+                    //this.NodeRecords.RemoveFromClosed(node);
                     this.NodeRecords.AddToOpen(child);
 
                     child.status = NodeStatus.Open;
