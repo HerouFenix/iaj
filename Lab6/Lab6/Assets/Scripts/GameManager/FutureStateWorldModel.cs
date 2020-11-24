@@ -34,7 +34,7 @@ namespace Assets.Scripts.GameManager
             float time = (float)this.GetProperty(Properties.TIME);
             int money = (int)this.GetProperty(Properties.MONEY);
 
-            return HP <= 0 ||  time >= 200 || (this.NextPlayer == 0 && money == 25);
+            return HP <= 0 || time >= 200 || (this.NextPlayer == 0 && money == 25);
         }
 
         public override float GetScore()
@@ -48,6 +48,17 @@ namespace Assets.Scripts.GameManager
                 return 1.0f;
             }
             else return 0.0f;
+            //else
+            //{
+            //    var maxHp = (int)this.GetProperty(Properties.MAXHP) + 5;
+            //    var shieldHP = (int)this.GetProperty(Properties.ShieldHP);
+            //
+            //    var level = (int)this.GetProperty(Properties.LEVEL);
+            //    var mana = (int)this.GetProperty(Properties.MANA);
+            //
+            //    var score = (shieldHP / maxHp) * 0.4f + (money / 25.0f) * 0.5f + (mana / 10) * 0.1f;
+            //    return score;
+            //}
         }
 
         public override int GetNextPlayer()
@@ -63,13 +74,13 @@ namespace Assets.Scripts.GameManager
             //basically if the character is close enough to an enemy, the next player will be the enemy.
             foreach (var enemy in this.GameManager.enemies)
             {
-                enemyEnabled = (bool) this.GetProperty(enemy.name);
+                enemyEnabled = (bool)this.GetProperty(enemy.name);
                 if (enemyEnabled && (enemy.transform.position - position).sqrMagnitude <= 100)
                 {
                     this.NextPlayer = 1;
                     this.NextEnemyAction = new SwordAttack(this.GameManager.autonomousCharacter, enemy);
                     this.NextEnemyActions = new Action[] { this.NextEnemyAction };
-                    return; 
+                    return;
                 }
             }
             this.NextPlayer = 0;

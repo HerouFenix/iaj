@@ -330,7 +330,7 @@ namespace Assets.Scripts
 
             this.TotalProcessingTimeText.text = "Process. Time: " + this.MCTSDecisionMaking.TotalProcessingTime.ToString("F");
 
-            this.ProcessedActionsText.text = "Max Depth: " + this.MCTSDecisionMaking.MaxPlayoutDepthReached.ToString();
+            this.ProcessedActionsText.text = "Max Playout Depth: " + this.MCTSDecisionMaking.MaxPlayoutDepthReached.ToString() + "\n" + "Max Selection Depth: " + this.MCTSDecisionMaking.MaxSelectionDepthReached;
 
             if (this.MCTSDecisionMaking.BestFirstChild != null)
             {
