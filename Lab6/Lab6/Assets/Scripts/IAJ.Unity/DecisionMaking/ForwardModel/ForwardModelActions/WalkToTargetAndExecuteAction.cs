@@ -60,11 +60,14 @@ namespace Assets.Scripts.IAJ.Unity.DecisionMaking.ForwardModel.ForwardModelActio
         {
             Vector3 delta = this.Target.transform.position - this.Character.Character.KinematicData.position;
 
-            if (delta.sqrMagnitude <= 5 )
+            if (delta.sqrMagnitude <= 5)
             {
                 this.Character.Character.Movement = null;
             }
-            else this.Character.StartPathfinding(this.Target.transform.position);
+            else
+            {
+                this.Character.StartPathfinding(this.Target.transform.position);
+            }
         }
 
 

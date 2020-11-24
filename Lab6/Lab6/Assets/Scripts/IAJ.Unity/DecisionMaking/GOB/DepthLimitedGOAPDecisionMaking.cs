@@ -8,7 +8,7 @@ namespace Assets.Scripts.IAJ.Unity.DecisionMaking.GOB
 {
     public class DepthLimitedGOAPDecisionMaking
     {
-        public const int MAX_DEPTH = 3;
+        public int MAX_DEPTH = 4;
         public int ActionCombinationsProcessedPerFrame { get; set; }
         public float TotalProcessingTime { get; set; }
         public int TotalActionCombinationsProcessed { get; set; }
@@ -21,7 +21,7 @@ namespace Assets.Scripts.IAJ.Unity.DecisionMaking.GOB
         public Action[] BestActionSequence { get; private set; }
         public Action BestAction { get; private set; }
         public float BestDiscontentmentValue { get; private set; }
-        private int CurrentDepth {  get; set; }
+        private int CurrentDepth { get; set; }
 
         public DepthLimitedGOAPDecisionMaking(CurrentStateWorldModel currentStateWorldModel, List<Action> actions, List<Goal> goals)
         {
@@ -47,9 +47,72 @@ namespace Assets.Scripts.IAJ.Unity.DecisionMaking.GOB
 
         public Action ChooseAction()
         {
-            // Put you code here
+            var startTime = Time.realtimeSinceStartup;
 
-            return null;
+            float currentValue;
+            int combinationsProcessed = 0; // Number of combinations processed on current frame
+
+            while (this.CurrentDepth >= 0)
+            {
+                currentValue = this.Models[this.CurrentDepth].CalculateDiscontentment(this.Goals);
+
+                if (this.CurrentDepth >= MAX_DEPTH)
+                {
+                    if (currentValue < this.BestDiscontentmentValue)
+                    {
+                        // Found better action/sequence
+                        this.BestDiscontentmentValue = currentValue;
+                        this.BestAction = this.ActionPerLevel[0];
+                        this.BestActionSequence = (Action[])this.ActionPerLevel.Clone();
+                    }
+
+                    this.CurrentDepth--;
+
+                    // We reached and processed a new action combination
+                    combinationsProcessed++;
+                    if (combinationsProcessed >= this.ActionCombinationsProcessedPerFrame)
+                    {
+                        this.TotalActionCombinationsProcessed += combinationsProcessed;
+                        this.TotalProcessingTime += Time.realtimeSinceStartup - startTime;
+                        return null;
+                    }
+
+                    continue;
+                }
+                else if (this.CurrentDepth > 0 && currentValue > this.BestDiscontentmentValue)
+                {
+                    // Current world has worse discontentment than the best computed so far. Not worth it to continue expanding it. Backtrack
+                    this.CurrentDepth--;
+                    continue;
+                }
+
+                var nextAction = this.Models[this.CurrentDepth].GetNextAction();
+                if (nextAction != null)
+                {
+                    this.Models[this.CurrentDepth + 1] = this.Models[this.CurrentDepth].GenerateChildWorldModel();
+                    nextAction.ApplyActionEffects(this.Models[this.CurrentDepth + 1]);
+
+                    this.ActionPerLevel[this.CurrentDepth] = nextAction;
+                    this.CurrentDepth++;
+                }
+                else
+                {
+                    // No more actions to be applied
+                    this.CurrentDepth--;
+                }
+            }
+
+            this.TotalActionCombinationsProcessed += combinationsProcessed;
+            this.TotalProcessingTime += Time.realtimeSinceStartup - startTime;
+            this.InProgress = false;
+
+            if (this.BestAction == null)
+            { // In case we couldn't execute any action, try reducing the depth
+                MAX_DEPTH--;
+                this.InitializeDecisionMakingProcess();
+            }
+
+            return this.BestAction;
         }
     }
 }

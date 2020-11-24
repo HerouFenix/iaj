@@ -61,15 +61,15 @@ namespace Assets.Scripts
         private Vector3 startPosition;
         private GlobalPath currentSolution;
         private GlobalPath currentSmoothedSolution;
-    
-        
+
+
         private bool draw;
         private float nextUpdateTime = 0.0f;
         private float previousGold = 0.0f;
         private int previousLevel = 1;
         private Vector3 previousTarget;
 
-		private Animator characterAnimator;
+        private Animator characterAnimator;
         public bool lookingForPath;
         PathfindingManager pathfindingManager;
 
@@ -78,7 +78,7 @@ namespace Assets.Scripts
         {
             this.draw = true;
 
-			this.characterAnimator = this.GetComponentInChildren<Animator>();
+            this.characterAnimator = this.GetComponentInChildren<Animator>();
         }
 
         public void Start()
@@ -110,7 +110,7 @@ namespace Assets.Scripts
             //initialization of the GOB decision making
             //let's start by creating 4 main goals
 
-            this.SurviveGoal = new Goal(SURVIVE_GOAL, 2.0f);
+            this.SurviveGoal = new Goal(SURVIVE_GOAL, 4.0f);
 
             this.GainLevelGoal = new Goal(GAIN_LEVEL_GOAL, 5.0f)
             {
@@ -120,10 +120,10 @@ namespace Assets.Scripts
             this.GetRichGoal = new Goal(GET_RICH_GOAL, 1.0f)
             {
                 InsistenceValue = 5.0f,
-                ChangeRate = 0.2f
+                ChangeRate = 0.1f
             };
 
-            this.BeQuickGoal = new Goal(BE_QUICK_GOAL, 1.0f)
+            this.BeQuickGoal = new Goal(BE_QUICK_GOAL, 2.0f)
             {
                 ChangeRate = 0.1f
             };
@@ -139,6 +139,9 @@ namespace Assets.Scripts
 
             this.Actions = new List<Action>();
 
+            this.Actions.Add(new LevelUp(this));
+            this.Actions.Add(new ShieldOfFaith(this));
+
             foreach (var chest in GameObject.FindGameObjectsWithTag("Chest"))
             {
                 this.Actions.Add(new PickUpChest(this, chest));
@@ -146,18 +149,18 @@ namespace Assets.Scripts
 
             foreach (var potion in GameObject.FindGameObjectsWithTag("ManaPotion"))
             {
-       //         this.Actions.Add(new GetManaPotion(this, potion));
+                this.Actions.Add(new GetManaPotion(this, potion));
             }
 
             foreach (var potion in GameObject.FindGameObjectsWithTag("HealthPotion"))
             {
-        //        this.Actions.Add(new GetHealthPotion(this, potion));
+                this.Actions.Add(new GetHealthPotion(this, potion));
             }
 
             foreach (var enemy in GameObject.FindGameObjectsWithTag("Skeleton"))
             {
                 this.Actions.Add(new SwordAttack(this, enemy));
-          //      this.Actions.Add(new DivineSmite(this, enemy));
+                this.Actions.Add(new DivineSmite(this, enemy));
             }
 
             foreach (var enemy in GameObject.FindGameObjectsWithTag("Orc"))
@@ -170,9 +173,8 @@ namespace Assets.Scripts
                 this.Actions.Add(new SwordAttack(this, enemy));
             }
 
-
             var worldModel = new CurrentStateWorldModel(this.GameManager, this.Actions, this.Goals);
-            this.GOAPDecisionMaking = new DepthLimitedGOAPDecisionMaking(worldModel,this.Actions,this.Goals);
+            this.GOAPDecisionMaking = new DepthLimitedGOAPDecisionMaking(worldModel, this.Actions, this.Goals);
             this.MCTSDecisionMaking = new MCTS(worldModel);
             this.Resting = false;
 
@@ -194,13 +196,13 @@ namespace Assets.Scripts
                 this.SurviveGoal.InsistenceValue = this.GameManager.characterData.MaxHP - this.GameManager.characterData.HP;
 
                 this.BeQuickGoal.InsistenceValue += DECISION_MAKING_INTERVAL * this.BeQuickGoal.ChangeRate;
-                if(this.BeQuickGoal.InsistenceValue > 10.0f)
+                if (this.BeQuickGoal.InsistenceValue > 10.0f)
                 {
                     this.BeQuickGoal.InsistenceValue = 10.0f;
                 }
 
                 this.GainLevelGoal.InsistenceValue += this.GainLevelGoal.ChangeRate; //increase in goal over time
-                if(this.GameManager.characterData.Level > this.previousLevel)
+                if (this.GameManager.characterData.Level > this.previousLevel)
                 {
                     this.GainLevelGoal.InsistenceValue -= this.GameManager.characterData.Level - this.previousLevel;
                     this.previousLevel = this.GameManager.characterData.Level;
@@ -212,6 +214,7 @@ namespace Assets.Scripts
                     this.GetRichGoal.InsistenceValue = 10.0f;
                 }
 
+                // TODO: CHECK THIS
                 if (this.GameManager.characterData.Money > this.previousGold)
                 {
                     this.GetRichGoal.InsistenceValue -= this.GameManager.characterData.Money - this.previousGold;
@@ -252,11 +255,11 @@ namespace Assets.Scripts
             {
                 if (this.CurrentAction.CanExecute())
                 {
-                  
                     this.CurrentAction.Execute();
                 }
                 // Sometimes the Character wants to perfom an action whose target is empty, that cannot happen
-                else if (this.CurrentAction is WalkToTargetAndExecuteAction) {
+                else if (this.CurrentAction is WalkToTargetAndExecuteAction)
+                {
                     var act = (WalkToTargetAndExecuteAction)this.CurrentAction;
                     if (!act.Target)
                     {
@@ -268,17 +271,18 @@ namespace Assets.Scripts
 
             //call the pathfinding method if the user specified a new goal
 
-            if (lookingForPath) { 
+            if (lookingForPath)
+            {
                 var finished = pathfindingManager.finished;
-                
+
                 if (finished)
                 {
                     this.currentSolution = new GlobalPath();
                     this.currentSmoothedSolution = new GlobalPath();
-                   // pathfindingManager.ClearGrid();
+                    // pathfindingManager.ClearGrid();
                     this.currentSolution = pathfindingManager.CalculateSolution(pathfindingManager.characterSolution);
                     pathfindingManager.finished = false;
-                    
+
                     //lets smooth out the Path
                     this.startPosition = this.Character.KinematicData.position;
                     if (this.currentSolution != null)
@@ -295,20 +299,20 @@ namespace Assets.Scripts
                         };
                     }
                 }
-                
+
             }
 
             this.Character.Update();
 
-			//manage the character's animation
-			if (this.Character.KinematicData.velocity.sqrMagnitude > 0.1) 
-			{
-				this.characterAnimator.SetBool ("Walking", true);
-			} 
-			else 
-			{
-				this.characterAnimator.SetBool ("Walking", false);
-			}
+            //manage the character's animation
+            if (this.Character.KinematicData.velocity.sqrMagnitude > 0.1)
+            {
+                this.characterAnimator.SetBool("Walking", true);
+            }
+            else
+            {
+                this.characterAnimator.SetBool("Walking", false);
+            }
         }
 
 
@@ -378,7 +382,7 @@ namespace Assets.Scripts
             {
                 if (newDecision)
                 {
-                  DiaryText.text += Time.time + " I decided to " + GOAPDecisionMaking.BestAction.Name + "\n";
+                    DiaryText.text += Time.time + " I decided to " + GOAPDecisionMaking.BestAction.Name + "\n";
                 }
                 var actionText = "";
                 foreach (var action in this.GOAPDecisionMaking.BestActionSequence)
@@ -400,7 +404,7 @@ namespace Assets.Scripts
 
             //if the targetPosition received is the same as a previous target, then this a request for the same target
             //no need to redo the pathfinding search
-            if(!this.previousTarget.Equals(targetPosition))
+            if (!this.previousTarget.Equals(targetPosition))
             {
                 lookingForPath = true;
                 this.pathfindingManager.InitializeSearch(this.Character.KinematicData.position, targetPosition, "Character");
@@ -419,6 +423,6 @@ namespace Assets.Scripts
             return discontentment;
         }
 
-      
+
     }
 }
