@@ -23,9 +23,10 @@ namespace Assets.Scripts
         public const string BE_QUICK_GOAL = "BeQuick";
         public const string GET_RICH_GOAL = "GetRich";
 
-        public const float DECISION_MAKING_INTERVAL = 20.0f;
+        public const float DECISION_MAKING_INTERVAL = 25.0f; //20.0f;
         public const float RESTING_INTERVAL = 5.0f;
         public const int REST_HP_RECOVERY = 2;
+
 
         //public fields to be set in Unity Editor
         public GameManager.GameManager GameManager;
@@ -41,6 +42,7 @@ namespace Assets.Scripts
         public Text BestActionDebugText;
         public Text DiaryText;
         public bool MCTSActive;
+        public bool MCTSBiasedActive;
         public bool Resting = false;
         public float StopRestTime;
 
@@ -110,20 +112,38 @@ namespace Assets.Scripts
             //initialization of the GOB decision making
             //let's start by creating 4 main goals
 
+            //this.SurviveGoal = new Goal(SURVIVE_GOAL, 4.0f);
+            //
+            //this.GainLevelGoal = new Goal(GAIN_LEVEL_GOAL, 5.0f)
+            //{
+            //    ChangeRate = 0.1f
+            //};
+            //
+            //this.GetRichGoal = new Goal(GET_RICH_GOAL, 1.0f)
+            //{
+            //    InsistenceValue = 5.0f,
+            //    ChangeRate = 0.1f
+            //};
+            //
+            //this.BeQuickGoal = new Goal(BE_QUICK_GOAL, 2.0f)
+            //{
+            //    ChangeRate = 0.1f
+            //};
+
             this.SurviveGoal = new Goal(SURVIVE_GOAL, 4.0f);
 
-            this.GainLevelGoal = new Goal(GAIN_LEVEL_GOAL, 5.0f)
+            this.GainLevelGoal = new Goal(GAIN_LEVEL_GOAL, 6.0f)
             {
                 ChangeRate = 0.1f
             };
 
-            this.GetRichGoal = new Goal(GET_RICH_GOAL, 1.0f)
+            this.GetRichGoal = new Goal(GET_RICH_GOAL, 5.0f)
             {
                 InsistenceValue = 5.0f,
-                ChangeRate = 0.1f
+                ChangeRate = 1.0f
             };
 
-            this.BeQuickGoal = new Goal(BE_QUICK_GOAL, 2.0f)
+            this.BeQuickGoal = new Goal(BE_QUICK_GOAL, 6.0f)
             {
                 ChangeRate = 0.1f
             };
@@ -140,6 +160,8 @@ namespace Assets.Scripts
             this.Actions = new List<Action>();
 
             this.Actions.Add(new LevelUp(this));
+            this.Actions.Add(new Teleport(this));
+            //this.Actions.Add(new Rest(this));
             this.Actions.Add(new ShieldOfFaith(this));
 
             foreach (var chest in GameObject.FindGameObjectsWithTag("Chest"))
@@ -175,8 +197,17 @@ namespace Assets.Scripts
 
             var worldModel = new CurrentStateWorldModel(this.GameManager, this.Actions, this.Goals);
             this.GOAPDecisionMaking = new DepthLimitedGOAPDecisionMaking(worldModel, this.Actions, this.Goals);
-            this.MCTSDecisionMaking = new MCTS(worldModel);
+
+            if (this.MCTSBiasedActive)
+            {
+                this.MCTSDecisionMaking = new MCTSBiasedPlayout(worldModel);
+            }
+            else
+            {
+                this.MCTSDecisionMaking = new MCTS(worldModel);
+            }
             this.Resting = false;
+            this.StopRestTime = -1.0f;
 
             DiaryText.text += "My Diary \n I awoke. What a wonderful day to kill Monsters! \n";
         }
@@ -185,7 +216,12 @@ namespace Assets.Scripts
         {
             if (GameManager.gameEnded) return;
 
-            if (Time.time > this.nextUpdateTime || this.GameManager.WorldChanged)
+            if (Input.GetKeyDown(KeyCode.Space))
+            {
+                this.lookingForPath = true;
+            }
+
+            if (!this.Resting && (Time.time > this.nextUpdateTime || this.GameManager.WorldChanged))
             {
                 this.GameManager.WorldChanged = false;
                 this.nextUpdateTime = Time.time + DECISION_MAKING_INTERVAL;
@@ -218,6 +254,10 @@ namespace Assets.Scripts
                 if (this.GameManager.characterData.Money > this.previousGold)
                 {
                     this.GetRichGoal.InsistenceValue -= this.GameManager.characterData.Money - this.previousGold;
+                    if (this.GetRichGoal.InsistenceValue < 0.0f)
+                    {
+                        this.GetRichGoal.InsistenceValue = 0.0f;
+                    }
                     this.previousGold = this.GameManager.characterData.Money;
                 }
 
@@ -232,7 +272,7 @@ namespace Assets.Scripts
                 //initialize Decision Making Proccess
                 lookingForPath = false;
                 this.CurrentAction = null;
-                if (this.MCTSActive)
+                if (this.MCTSActive || this.MCTSBiasedActive)
                 {
                     this.MCTSDecisionMaking.InitializeMCTSearch();
                 }
@@ -242,7 +282,7 @@ namespace Assets.Scripts
                 }
             }
 
-            if (this.MCTSActive)
+            if (this.MCTSActive || this.MCTSBiasedActive)
             {
                 this.UpdateMCTS();
             }
@@ -253,7 +293,24 @@ namespace Assets.Scripts
 
             if (this.CurrentAction != null && !lookingForPath)
             {
-                if (this.CurrentAction.CanExecute())
+                if (this.CurrentAction is Rest)
+                {
+                    if (!this.Resting)
+                    { // Started resting
+                        this.Resting = true;
+                        this.StopRestTime = Time.time + RESTING_INTERVAL;
+                        
+                    }
+
+                    if (Time.time >= this.StopRestTime)
+                    { // Rested long enough
+                        this.Resting = false;
+                        this.StopRestTime = -1.0f;
+
+                        this.CurrentAction.Execute();
+                    }
+                }
+                else if (this.CurrentAction.CanExecute())
                 {
                     this.CurrentAction.Execute();
                 }
@@ -290,6 +347,7 @@ namespace Assets.Scripts
 
                         // The smoothing algorithm is in the PathfindManager
                         this.currentSmoothedSolution = pathfindingManager.smoothPath(startPosition, this.currentSolution);
+                        //this.currentSmoothedSolution = this.currentSolution;
                         this.currentSmoothedSolution.CalculateLocalPathsFromPathPositions(this.Character.KinematicData.position);
                         lookingForPath = false;
                         this.Character.Movement = new DynamicFollowPath(this.Character.KinematicData, this.currentSmoothedSolution)
@@ -302,7 +360,8 @@ namespace Assets.Scripts
 
             }
 
-            this.Character.Update();
+            if(!Resting)
+                this.Character.Update();
 
             //manage the character's animation
             if (this.Character.KinematicData.velocity.sqrMagnitude > 0.1)

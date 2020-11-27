@@ -11,15 +11,6 @@ namespace Assets.Scripts.IAJ.Unity.DecisionMaking.ForwardModel.ForwardModelActio
 
         }
 
-        public float GetGoalChange(Goal goal)
-        {
-            var expectedHPGain = base.Character.GameManager.characterData.MaxHP - base.Character.GameManager.characterData.HP;
-
-            var change = base.GetGoalChange(goal);
-            if (goal.Name == AutonomousCharacter.SURVIVE_GOAL) change = expectedHPGain;
-            return change;
-        }
-
         public override bool CanExecute()
         {
 
@@ -61,13 +52,15 @@ namespace Assets.Scripts.IAJ.Unity.DecisionMaking.ForwardModel.ForwardModelActio
 
         public override float GetHValue(WorldModel worldModel)
         {
-            int addedHP = (int)worldModel.GetProperty(Properties.MAXHP) - (int)worldModel.GetProperty(Properties.HP);
-
-            if (addedHP == 0)
+            float addedHP = (int)worldModel.GetProperty(Properties.MAXHP) - (int)worldModel.GetProperty(Properties.HP);
+            float maxHP = (int)worldModel.GetProperty(Properties.MAXHP);
+            float proportionCured = (addedHP / maxHP)*10.0f;
+            if (addedHP < 3)
             { // Makes no sense to try to go get a health potion when you're at max HP (i.e addedHP is 0)
-                return 100f;
+                return 1000f;
             }
-            return base.GetHValue(worldModel) * 1 / addedHP; //The more HP we add, the smaller the HValue
+            
+            return base.GetHValue(worldModel) / (addedHP/2.0f); // ; //The more HP we add, the smaller the HValue
         }
     }
 }

@@ -11,13 +11,6 @@ namespace Assets.Scripts.IAJ.Unity.DecisionMaking.ForwardModel.ForwardModelActio
         {
         }
 
-        public float GetGoalChange(Goal goal)
-        {
-            var change = base.GetGoalChange(goal);
-            if (goal.Name == AutonomousCharacter.GET_RICH_GOAL) change -= 5.0f;
-            return change;
-        }
-
         public override bool CanExecute()
         {
 
@@ -55,7 +48,7 @@ namespace Assets.Scripts.IAJ.Unity.DecisionMaking.ForwardModel.ForwardModelActio
 
         public override float GetHValue(WorldModel worldModel)
         {
-            return base.GetHValue(worldModel);
+            return base.GetHValue(worldModel)/5.0f;
         }
     }
 }

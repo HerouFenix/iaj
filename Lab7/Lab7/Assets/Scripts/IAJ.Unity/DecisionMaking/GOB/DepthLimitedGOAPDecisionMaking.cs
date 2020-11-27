@@ -87,7 +87,7 @@ namespace Assets.Scripts.IAJ.Unity.DecisionMaking.GOB
                 }
 
                 var nextAction = this.Models[this.CurrentDepth].GetNextAction();
-                if (nextAction != null)
+                if (nextAction != null && nextAction.CanExecute(this.Models[this.CurrentDepth]))
                 {
                     this.Models[this.CurrentDepth + 1] = this.Models[this.CurrentDepth].GenerateChildWorldModel();
                     nextAction.ApplyActionEffects(this.Models[this.CurrentDepth + 1]);

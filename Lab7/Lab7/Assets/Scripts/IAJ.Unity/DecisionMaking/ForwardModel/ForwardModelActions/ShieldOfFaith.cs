@@ -42,24 +42,15 @@ namespace Assets.Scripts.IAJ.Unity.DecisionMaking.ForwardModel.ForwardModelActio
             worldModel.SetProperty(Properties.MANA, (int)worldModel.GetProperty(Properties.MANA)-5);
         }
 
-        public float GetGoalChange(Goal goal)
-        {
-            var expectedHPGain = 5 - this.Character.GameManager.characterData.ShieldHP;
-
-            var change = base.GetGoalChange(goal);
-            if (goal.Name == AutonomousCharacter.SURVIVE_GOAL) change -= expectedHPGain;
-            return change;
-        }
-
         public override float GetHValue(WorldModel worldModel)
         {
             int addedHP = 5 - (int)worldModel.GetProperty(Properties.ShieldHP);
 
             if (addedHP == 0)
             { // Makes no sense to try to go get a health potion when you're at max shield HP (i.e addedHP is 0)
-                return 100f;
+                return 1000f;
             }
-            return base.GetHValue(worldModel) * 1 / addedHP; //The more HP we add, the smaller the HValue
+            return 1/(addedHP*2.0f); //The more HP we add, the smaller the HValue
         }
     }
 }

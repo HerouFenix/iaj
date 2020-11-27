@@ -47,12 +47,12 @@ namespace Assets.Scripts.IAJ.Unity.DecisionMaking.ForwardModel.ForwardModelActio
         public override float GetHValue(WorldModel worldModel)
         {
             int addedMana = 10 - (int)worldModel.GetProperty(Properties.MANA);
-
-            if (addedMana == 0)
-            { // Makes no sense to try to go get a mana potion when you're at max Mana (i.e addedMana is 0)
-                return 100f;
+            if (addedMana < 3)
+            { // Makes no sense to try to go get a mana potion when you still got so much
+                return 1000f;
             }
-            return base.GetHValue(worldModel) * 1 / addedMana; //The more Mana we add, the smaller the HValue
+
+            return base.GetHValue(worldModel) / (addedMana * 2.0f); //The more Mana we add, the smaller the HValue
         }
     }
 }

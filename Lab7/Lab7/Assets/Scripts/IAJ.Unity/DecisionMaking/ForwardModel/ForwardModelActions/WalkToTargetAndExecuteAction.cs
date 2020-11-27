@@ -35,15 +35,6 @@ namespace Assets.Scripts.IAJ.Unity.DecisionMaking.ForwardModel.ForwardModelActio
             return distance / this.Character.Character.MaxSpeed;
         }
 
-        public float GetGoalChange(Goal goal)
-        {
-            if (goal.Name == AutonomousCharacter.BE_QUICK_GOAL)
-            {
-                return this.GetDuration();
-            }
-            else return 0;
-        }
-
         public override bool CanExecute()
         {
             return this.Target != null;
@@ -58,9 +49,9 @@ namespace Assets.Scripts.IAJ.Unity.DecisionMaking.ForwardModel.ForwardModelActio
 
         public override void Execute()
         {
-            Vector3 delta = this.Target.transform.position - this.Character.Character.KinematicData.position;
+            float distance = this.getDistance(this.Character.gameObject.transform.position, Target.transform.position);
 
-            if (delta.sqrMagnitude <= 5)
+            if (distance <= 0.5)
             {
                 this.Character.Character.Movement = null;
             }
@@ -88,7 +79,7 @@ namespace Assets.Scripts.IAJ.Unity.DecisionMaking.ForwardModel.ForwardModelActio
         {
             var position = (Vector3)worldModel.GetProperty(Properties.POSITION);
             var distance = getDistance(position, Target.transform.position);
-            return distance * 1/25.0f;
+            return distance* 1/25.0f;
         }
 
         private float getDistance(Vector3 currentPosition, Vector3 targetPosition)

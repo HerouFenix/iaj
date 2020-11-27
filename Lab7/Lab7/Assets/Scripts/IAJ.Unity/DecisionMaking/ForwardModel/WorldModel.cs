@@ -108,6 +108,20 @@ namespace Assets.Scripts.IAJ.Unity.DecisionMaking.ForwardModel
             return discontentment;
         }
 
+        public float CalculateUtility(List<Goal> goals)
+        {
+            var utility = 0.0f;
+
+            foreach (var goal in goals)
+            {
+                var newValue = this.GetGoalValue(goal.Name);
+
+                utility += newValue;
+            }
+
+            return utility;
+        }
+
         public virtual Action GetNextAction()
         {
             Action action = null;

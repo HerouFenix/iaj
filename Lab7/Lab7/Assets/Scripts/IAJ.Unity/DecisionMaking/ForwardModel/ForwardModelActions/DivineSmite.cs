@@ -17,18 +17,6 @@ namespace Assets.Scripts.IAJ.Unity.DecisionMaking.ForwardModel.ForwardModelActio
             this.expectedXPChange = 2.7f;
         }
 
-        public float GetGoalChange(Goal goal)
-        {
-            var change = base.GetGoalChange(goal);
-
-            if (goal.Name == AutonomousCharacter.GAIN_LEVEL_GOAL)
-            {
-                change += -this.expectedXPChange;
-            }
-
-            return change;
-        }
-
         public override bool CanExecute()
         {
             return base.CanExecute() && this.Character.GameManager.characterData.Mana >= 2;

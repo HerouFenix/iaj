@@ -14,9 +14,10 @@ namespace Assets.Scripts.IAJ.Unity.DecisionMaking.MCTS
         public bool InProgress { get; private set; }
         public int MaxIterations { get; set; }
         public int MaxIterationsProcessedPerFrame { get; set; }
-        public int MaxPlayoutDepthReached { get; private set; }
-        public int MaxSelectionDepthReached { get; private set; }
-        public float TotalProcessingTime { get; private set; }
+        public int MaxPlayoutDepthReached { get; set; }
+        public int MaxPlayouts { get; set; }
+        public int MaxSelectionDepthReached { get; set; }
+        public float TotalProcessingTime { get; set; }
         public MCTSNode BestFirstChild { get; set; }
         public List<Action> BestActionSequence { get; private set; }
         public WorldModel BestActionSequenceWorldState { get; private set; }
@@ -33,9 +34,10 @@ namespace Assets.Scripts.IAJ.Unity.DecisionMaking.MCTS
         {
             this.InProgress = false;
             this.CurrentStateWorldModel = currentStateWorldModel;
-            this.MaxIterations = 1500;
-            this.MaxIterationsProcessedPerFrame = 50;
+            this.MaxIterations = 500;
+            this.MaxIterationsProcessedPerFrame = 25;
             this.RandomGenerator = new System.Random();
+            this.MaxPlayouts = 5;
         }
 
 
@@ -65,7 +67,7 @@ namespace Assets.Scripts.IAJ.Unity.DecisionMaking.MCTS
 
             var startTime = Time.realtimeSinceStartup;
 
-            while(this.CurrentIterations < this.MaxIterations)
+            while (this.CurrentIterations < this.MaxIterations)
             {
                 if (this.CurrentIterationsInFrame > this.MaxIterationsProcessedPerFrame)
                 {
@@ -74,9 +76,21 @@ namespace Assets.Scripts.IAJ.Unity.DecisionMaking.MCTS
                     return null;
                 }
 
+                // Selection
                 selectedNode = this.Selection(this.InitialNode);
+
+                // Playout (Simulate result)
                 reward = this.Playout(selectedNode.State);
 
+                // Do several playouts and get the average reward
+                for (int i = 1; i < this.MaxPlayouts; i++)
+                {
+                    reward.Value += this.Playout(selectedNode.State).Value;
+                }
+                reward.Value = reward.Value / this.MaxPlayouts;
+
+
+                // Backpropagate results
                 this.Backpropagate(selectedNode, reward);
 
                 this.CurrentIterationsInFrame++;
@@ -94,25 +108,22 @@ namespace Assets.Scripts.IAJ.Unity.DecisionMaking.MCTS
         {
             Action nextAction;
             MCTSNode currentNode = initialNode;
-            MCTSNode bestChild = null; // TODO ???
 
             int selectionDepth = 0;
 
             while (!currentNode.State.IsTerminal())
             {
-                //selection and expansion
+                selectionDepth++;
                 nextAction = currentNode.State.GetNextAction();
-                
-                if(nextAction != null)
-                {
-                    return this.Expand(currentNode, nextAction);
-                }
-                else
+                if (nextAction == null) // Node fully expanded, go to its best child and carry on
                 {
                     currentNode = this.BestUCTChild(currentNode);
                 }
+                else
+                { // Still got more actions so expand (will generate a new Leaf node)
+                    return this.Expand(currentNode, nextAction);
+                }
 
-                selectionDepth++;
             }
 
             if (selectionDepth > this.MaxSelectionDepthReached)
@@ -120,6 +131,7 @@ namespace Assets.Scripts.IAJ.Unity.DecisionMaking.MCTS
                 this.MaxSelectionDepthReached = selectionDepth;
             }
 
+            // CurrentNode is terminal, hence its a leaf
             return currentNode;
         }
 
@@ -141,14 +153,15 @@ namespace Assets.Scripts.IAJ.Unity.DecisionMaking.MCTS
                 playoutDepth++;
             }
 
-            if(playoutDepth > this.MaxPlayoutDepthReached)
+            if (playoutDepth > this.MaxPlayoutDepthReached)
             {
                 this.MaxPlayoutDepthReached = playoutDepth;
             }
 
             Reward reward = new Reward
             {
-                Value = state.GetScore()
+                Value = state.GetScore(),
+                PlayerID = state.GetNextPlayer()
             };
 
             return reward;
@@ -156,10 +169,12 @@ namespace Assets.Scripts.IAJ.Unity.DecisionMaking.MCTS
 
         protected virtual void Backpropagate(MCTSNode node, Reward reward)
         {
-            while(node != null)
+            while (node != null)
             {
+                //node.N = node.N + 1;
+                //node.Q = node.Q + reward.Value;
                 node.N = node.N + 1;
-                node.Q = node.Q + reward.Value; // TODO Is this right?
+                node.Q = node.Q + reward.Value;
 
                 node = node.Parent;
             }
@@ -171,10 +186,15 @@ namespace Assets.Scripts.IAJ.Unity.DecisionMaking.MCTS
 
             action.ApplyActionEffects(newState);
 
+            newState.CalculateNextPlayer();
+
             MCTSNode newNode = new MCTSNode(newState)
             {
                 Action = action,
-                Parent = parent
+                Parent = parent,
+                PlayerID = newState.GetNextPlayer(),
+                Q = 0,
+                N = 0
             };
 
             parent.ChildNodes.Add(newNode);
@@ -187,14 +207,43 @@ namespace Assets.Scripts.IAJ.Unity.DecisionMaking.MCTS
             float bestEstimatedValue = -1.0f;
             MCTSNode bestChild = null;
 
-            foreach(MCTSNode child in node.ChildNodes)
+            foreach (MCTSNode child in node.ChildNodes)
             {
-                var estimatedValue = child.Q / child.N + C * Mathf.Sqrt(Mathf.Log10(node.N) / child.N);
-                
-                if(estimatedValue > bestEstimatedValue)
+                float estimatedValue;
+
+                if (node.Parent == null && child.Action.Name == "LevelUp")
+                { // Is this cheating??? We're removing the really stupid decisions that may happen due to the shitty way were computing score
+                    estimatedValue = 1.0f;
+                }
+                else if (node.Parent == null && child.Action.Name.Contains("GetHealthPotion") && (int)node.State.GetProperty("HP") == (int)node.State.GetProperty("MAXHP"))
+                {
+                    estimatedValue = -1.0f;
+                }
+                else if (node.Parent == null && child.Action.Name.Contains("GetManaPotion") && (int)node.State.GetProperty("Mana") == 10)
+                {
+                    estimatedValue = -1.0f;
+                }
+                else if (node.Parent == null && child.Action.Name == "ShieldOfFaith" && (int)node.State.GetProperty("ShieldHP") == 5)
+                {
+                    estimatedValue = -1.0f;
+                }
+                else
+                {
+                    estimatedValue = child.Q / child.N + C * Mathf.Sqrt(Mathf.Log10(node.N) / child.N);
+                }
+
+                if (estimatedValue > bestEstimatedValue)
                 {
                     bestEstimatedValue = estimatedValue;
                     bestChild = child;
+                }
+                else if (Mathf.Abs(estimatedValue - bestEstimatedValue) < 1e-3)
+                { //If same estimated value, then check if one is quicker than the other
+                    if (child.Action.GetDuration() < bestChild.Action.GetDuration())
+                    {
+                        bestEstimatedValue = estimatedValue;
+                        bestChild = child;
+                    }
                 }
             }
 
@@ -210,12 +259,39 @@ namespace Assets.Scripts.IAJ.Unity.DecisionMaking.MCTS
 
             foreach (MCTSNode child in node.ChildNodes)
             {
-                var estimatedValue = child.Q / child.N + Mathf.Sqrt(Mathf.Log10(node.N) / child.N);
+                float estimatedValue;
+                if (node.Parent == null && child.Action.Name == "LevelUp")
+                { // Is this cheating??? We're removing the really stupid decisions that may happen due to the shitty way were computing score
+                    estimatedValue = 1.0f;
+                }
+                else if (node.Parent == null && child.Action.Name.Contains("GetHealthPotion") && (int)node.State.GetProperty("HP") == (int)node.State.GetProperty("MAXHP"))
+                {
+                    estimatedValue = -1.0f;
+                }
+                else if (node.Parent == null && child.Action.Name.Contains("GetManaPotion") && (int)node.State.GetProperty("Mana") == 10)
+                {
+                    estimatedValue = -1.0f;
+                }
+                else if (node.Parent == null && child.Action.Name == "ShieldOfFaith" && (int)node.State.GetProperty("ShieldHP") == 5)
+                {
+                    estimatedValue = -1.0f;
+                }
+                else
+                {
+                    estimatedValue = child.Q / child.N;
+                }
 
                 if (estimatedValue > bestEstimatedValue)
                 {
                     bestEstimatedValue = estimatedValue;
                     bestChild = child;
+                }else if(Mathf.Abs(estimatedValue-bestEstimatedValue) < 1e-3)
+                { //If same estimated value, then check if one is quicker than the other
+                    if(child.Action.GetDuration() < bestChild.Action.GetDuration())
+                    {
+                        bestEstimatedValue = estimatedValue;
+                        bestChild = child;
+                    }
                 }
             }
 

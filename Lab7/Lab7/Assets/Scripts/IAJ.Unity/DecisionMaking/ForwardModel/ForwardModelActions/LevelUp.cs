@@ -46,18 +46,6 @@ namespace Assets.Scripts.IAJ.Unity.DecisionMaking.ForwardModel.ForwardModelActio
             worldModel.SetGoalValue(AutonomousCharacter.GAIN_LEVEL_GOAL, 0);
         }
 
-        public float GetGoalChange(Goal goal)
-        {
-            float change = 0.0f;
-
-            if (goal.Name == AutonomousCharacter.GAIN_LEVEL_GOAL)
-            {
-                change = -goal.InsistenceValue;
-            }
-
-            return change;
-        }
-
         public override float GetHValue(WorldModel worldModel)
         {
             //you would be dumb not to level up if possible

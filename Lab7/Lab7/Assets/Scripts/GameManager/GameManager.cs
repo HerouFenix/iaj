@@ -12,7 +12,7 @@ namespace Assets.Scripts.GameManager
     public class GameManager : MonoBehaviour
     {
         private const float UPDATE_INTERVAL = 2.0f;
-        public const int TIME_LIMIT = 200;
+        public int TIME_LIMIT = 200;
         //public fields, seen by Unity in Editor
         public GameObject character { get; private set; }
         public AutonomousCharacter autonomousCharacter { get; private set; }
@@ -30,6 +30,7 @@ namespace Assets.Scripts.GameManager
         public bool StochasticWorld;
         public bool SleepingNPCs;
         public bool MCTSActive;
+        public bool MCTSBiasedActive;
 
         //fields
         public List<GameObject> chests { get; set; }
@@ -43,7 +44,7 @@ namespace Assets.Scripts.GameManager
         public bool WorldChanged { get; set; }
         private DynamicCharacter enemyCharacter;
         private GameObject currentEnemy;
- 
+
         private float nextUpdateTime = 0.0f;
         private float enemyAttackCooldown = 0.0f;
         public bool gameEnded { get; set; } = false;
@@ -52,19 +53,22 @@ namespace Assets.Scripts.GameManager
 
         public void Start()
         {
-           
+
 
             pathfindingManager.Initialize();
-            
+
             UpdateDisposableObjects();
 
             this.character = pathfindingManager.character;
             autonomousCharacter = character.GetComponent<AutonomousCharacter>();
-            this.WorldChanged = false;
+            this.WorldChanged = true;
+            //this.WorldChanged = false;
             this.characterData = new CharacterData(this.character);
             this.initialPosition = this.character.transform.position;
             if (MCTSActive)
                 autonomousCharacter.MCTSActive = true;
+            else if (MCTSBiasedActive)
+                autonomousCharacter.MCTSBiasedActive = true;
             cellSize = pathfindingManager.cellSize;
         }
 
@@ -130,7 +134,7 @@ namespace Assets.Scripts.GameManager
 
             if (!this.SleepingNPCs)
             {
-                
+
                 if (enemyCharacter != null && currentEnemy != null && currentEnemy.activeSelf)
                 {
                     if ((currentEnemy.transform.position - this.character.transform.position).sqrMagnitude > 2500)
@@ -175,7 +179,7 @@ namespace Assets.Scripts.GameManager
 
                             break;
 
-                        }                        
+                        }
                     }
                 }
             }
@@ -188,13 +192,13 @@ namespace Assets.Scripts.GameManager
             this.ManaText.text = "Mana: " + this.characterData.Mana;
             this.MoneyText.text = "Money: " + this.characterData.Money;
 
-            if(this.characterData.HP <= 0 || this.characterData.Time >= TIME_LIMIT)
+            if (this.characterData.HP <= 0 || this.characterData.Time >= TIME_LIMIT)
             {
                 this.GameEnd.SetActive(true);
                 this.gameEnded = true;
                 this.GameEnd.GetComponentInChildren<Text>().text = "You Died";
             }
-            else if(this.characterData.Money >= 25)
+            else if (this.characterData.Money >= 25)
             {
                 this.GameEnd.SetActive(true);
                 this.gameEnded = true;
@@ -215,7 +219,7 @@ namespace Assets.Scripts.GameManager
                 if (this.StochasticWorld)
                 {
                     damage = enemyData.dmgRoll.Invoke();
- 
+
                     //attack roll = D20 + attack modifier. Using 7 as attack modifier (+4 str modifier, +3 proficiency bonus)
                     int attackRoll = RandomHelper.RollD20() + 7;
 
@@ -309,7 +313,7 @@ namespace Assets.Scripts.GameManager
 
         public void PickUpChest(GameObject chest)
         {
-          
+
             if (chest != null && chest.activeSelf && InChestRange(chest))
             {
                 this.autonomousCharacter.DiaryText.text += Time.time + " I opened  " + chest.name + "\n";
@@ -320,7 +324,6 @@ namespace Assets.Scripts.GameManager
                 this.WorldChanged = true;
             }
         }
-
 
         public void GetManaPotion(GameObject manaPotion)
         {
@@ -358,6 +361,32 @@ namespace Assets.Scripts.GameManager
                 this.WorldChanged = true;
                 this.autonomousCharacter.DiaryText.text += Time.time + " I leveled up to level " + this.characterData.Level + "\n";
             }
+        }
+
+        public void Teleport()
+        {
+            if (this.characterData.Level >= 2 && this.characterData.Mana >= 5)
+            {
+                this.character.transform.position = this.initialPosition;
+                this.characterData.Mana -= 5;
+                this.autonomousCharacter.DiaryText.text += Time.time + " Deity of the Helm get me out of here!\n";
+                this.WorldChanged = true;
+            }
+        }
+
+        public void Rest()
+        {
+            if (this.characterData.HP >= this.characterData.MaxHP - 2)
+            {
+                this.characterData.HP = this.characterData.MaxHP;
+            }
+            else
+            {
+                this.characterData.HP += 2;
+            }
+
+            this.autonomousCharacter.DiaryText.text += Time.time + " I took a short rest\n";
+            this.WorldChanged = true;
         }
 
         public void ShieldOfFaith()
@@ -399,7 +428,7 @@ namespace Assets.Scripts.GameManager
 
         public bool InMeleeRange(GameObject enemy)
         {
-            if(enemy.name.Contains("Dragon"))
+            if (enemy.name.Contains("Dragon"))
                 return this.CheckRange(enemy, 45.0f);
             if (enemy.name.Contains("Orc"))
                 return this.CheckRange(enemy, 30.0f);
